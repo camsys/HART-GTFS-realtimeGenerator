@@ -53,11 +53,15 @@ public class RetrieveTransitDataV2 {
   }	
 
   @SuppressWarnings("finally")
-  public ResultSet executeQuery(Connection conn){
+  public ResultSet executeQuery(Connection conn, Integer timeout){
     ResultSet rs = null;
     try {
       Statement stmt = conn.createStatement(ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
-      _log.info("Executing SELECT query...");
+      if (timeout != null && timeout > -1) {
+    	  _log.debug("queryTimeout(" + timeout + ")");
+    	  stmt.setQueryTimeout(timeout);
+      }
+      _log.debug("Executing SELECT query...");
       rs = stmt.executeQuery(query);
     } catch (SQLException e) {
       _log.error("Failed to execute SELECT query: " + e.getMessage());

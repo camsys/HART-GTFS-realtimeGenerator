@@ -28,6 +28,7 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.Parser;
 import org.onebusaway.cli.CommandLineInterfaceLibrary;
 import org.onebusaway.guice.jsr250.LifecycleService;
+import org.onebusway.gtfs_realtime.exporter.LastUpdateDeltaServlet;
 import org.onebusway.gtfs_realtime.exporter.TripUpdatesFileWriter;
 import org.onebusway.gtfs_realtime.exporter.TripUpdatesServlet;
 import org.onebusway.gtfs_realtime.exporter.VehiclePositionsFileWriter;
@@ -56,6 +57,8 @@ public class HartToGtfsRealtimeMain {
 
 	private static final String ARG_VEHICLE_POSITIONS_URL = "vehiclePositionsUrl";
 	
+	private static final String ARG_MONITOR_URL = "lastUpdateDeltaUrl";
+	
 	private static final String ARG_REFRESH_INTERVAL = "refreshInterval";
 
 	public static void main(String[] args) throws Exception {
@@ -67,6 +70,8 @@ public class HartToGtfsRealtimeMain {
 	private HartToGtfsRealtimeServiceV2 _provider;
 
 	private LifecycleService _lifecycleService;
+
+	
 
 //	@Inject
 //	public void setProvider(HartToGtfsRealtimeServiceV1 provider) {
@@ -123,6 +128,12 @@ public class HartToGtfsRealtimeMain {
 			writer.setPath(path);
 		}
 		
+		if (cli.hasOption(ARG_MONITOR_URL)) {
+			URL url = new URL(cli.getOptionValue(ARG_MONITOR_URL));
+			LastUpdateDeltaServlet servlet = injector.getInstance(LastUpdateDeltaServlet.class);
+			servlet.setUrl(url);
+		}
+		
 		if (cli.hasOption(ARG_REFRESH_INTERVAL)) {
 		  _provider.setRefreshInterval(Integer.parseInt(cli.getOptionValue(ARG_REFRESH_INTERVAL)));
     }
@@ -140,6 +151,7 @@ public class HartToGtfsRealtimeMain {
 		options.addOption(ARG_VEHICLE_POSITIONS_PATH, true,
 				"vehicle positions path");
 		options.addOption(ARG_VEHICLE_POSITIONS_URL, true, "vehicle positions url");
+		options.addOption(ARG_MONITOR_URL, true, "monitoring status url");
 		options.addOption(ARG_REFRESH_INTERVAL, true, "realtime data refresh interval");
 
 	}

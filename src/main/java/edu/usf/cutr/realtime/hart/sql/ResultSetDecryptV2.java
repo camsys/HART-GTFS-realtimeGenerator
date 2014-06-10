@@ -24,6 +24,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import edu.usf.cutr.realtime.hart.models.TransitDataV2;
 
 /**
@@ -33,6 +36,7 @@ import edu.usf.cutr.realtime.hart.models.TransitDataV2;
  */
 
 public class ResultSetDecryptV2 {
+	private static final Logger _log = LoggerFactory.getLogger(ResultSetDecryptV2.class);
 	private ResultSet rs;
 	private ResultSetMetaData rsmd;
 	private HashMap<String, Integer> columnInfo;
@@ -44,8 +48,7 @@ public class ResultSetDecryptV2 {
 			columnInfo = new HashMap<String, Integer>();
 			columnInfo.putAll(getColumnInfo(rsmd));
 		} catch (SQLException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			_log.error("decrypt constructor error:", e);
 		}
 
 	}
@@ -59,8 +62,7 @@ public class ResultSetDecryptV2 {
 			        transitData.add(td);
 			}
 		} catch (SQLException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			_log.error("decrypt error:", e);
 		}
 		return transitData;
 	}
@@ -148,12 +150,12 @@ public class ResultSetDecryptV2 {
                         return "";
                     }
                 default: {
-                    System.out.println("ERROR: unknown sql datatype (" + datatype + ") for column: " + colName);
+                    _log.error("ERROR: unknown sql datatype (" + datatype + ") for column: " + colName);
                     return null;
                 }
             }
         } catch (java.sql.SQLException ex) {
-            System.out.println("SQL Exception ERROR at " + colName + ": " + ex.getMessage());
+            _log.error("SQL Exception ERROR at " + colName + ": " + ex.getMessage());
         }
         return null;
     }

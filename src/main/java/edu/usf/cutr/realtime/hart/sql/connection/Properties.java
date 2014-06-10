@@ -64,4 +64,10 @@ public class Properties extends java.util.Properties{
 	public String getPassword() {
 		return getProperty("password");
 	}
+	
+	public Integer getQueryTimeout() {
+		String queryTimeoutStr = getProperty("queryTimeout");
+		if (queryTimeoutStr == null) return null;
+		return Integer.parseInt(queryTimeoutStr);
+	}
 }

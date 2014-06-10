@@ -286,7 +286,6 @@ public class HartToGtfsRealtimeServiceV1{
 	}
 
 	private class RefreshTransitData implements Runnable {
-		@Override
 		public void run() {
 			try {
 				_log.info("refreshing vehicles");

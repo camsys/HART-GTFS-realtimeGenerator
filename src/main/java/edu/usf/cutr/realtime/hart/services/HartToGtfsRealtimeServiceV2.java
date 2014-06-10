@@ -79,6 +79,8 @@ public class HartToGtfsRealtimeServiceV2{
 	private ScheduledExecutorService _executor;
 
 	private Connection _conn = null;
+	
+	private Integer _queryTimeout = null;
 
 	private RetrieveTransitDataV2 _rtd = null;
 	
@@ -123,7 +125,8 @@ public class HartToGtfsRealtimeServiceV2{
 	private Properties getConnectionProperties(){		
 		Properties connProps = new Properties();
 		try {
-			connProps.load(new FileInputStream("..\\config.properties"));
+			connProps.load(new FileInputStream("./config.properties"));
+			_queryTimeout = connProps.getQueryTimeout();
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			_log.error("Config file is not found: " + e.getMessage());
@@ -141,12 +144,15 @@ public class HartToGtfsRealtimeServiceV2{
 				":" + connProps.getPortNumber() + 
 				";database=" + connProps.getDatabaseName() + 
 				";user=" + connProps.getUser() + 
-				";password=" + connProps.getPassword();
+				";password=" + connProps.getPassword() +
+				";loginTimeout=" + 30;
 
 		_log.info("Connection String: "+connString);
 
 		try {
+		  DriverManager.setLoginTimeout(30); // 30 seconds
 			conn = DriverManager.getConnection(connString);
+			_log.debug("connection established");
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
 			_log.error("Failed to connect to " + connProps.getDatabaseName() + " database: " + e.getMessage());
@@ -155,22 +161,42 @@ public class HartToGtfsRealtimeServiceV2{
 		return conn;
 	}
 
+	 private void cleanup() {
+	   // for now we just measure a successful connection/disconnect from db, we don't look at data
+	   this._gtfsRealtimeProvider.setLastUpdateTimestamp(System.currentTimeMillis());
+	   _log.debug("closing connection");
+	    try {
+	      if (_conn != null) {
+	        _conn.close();
+	      }
+	    } catch (Exception bury) {
+	      // we don't care
+	    }
+	    _conn = null;
+	  }
+
 	private ArrayList<TransitDataV2> getOrbcadTransitData() throws Exception{
-		ResultSet rs = _rtd.executeQuery(_conn);
+		_log.debug("pre query");
+		ResultSet rs = _rtd.executeQuery(_conn, _queryTimeout);
 		if(rs == null){
 		  _conn = null;
 		  throw new Exception("ResultSet for SELECT query is null");
 		}
+		_log.debug("post query");
 		ResultSetDecryptV2 rsd = new ResultSetDecryptV2(rs);
+		_log.debug("pre decrypt");
 		ArrayList<TransitDataV2> transitData = rsd.decrypt();
-		_log.info(transitData.toString());
+		_log.debug("pre decrypt");
+		//_log.debug(transitData.toString());
+		cleanup();
 		return transitData;
 	}
 	
-	private ArrayList<TransitDataV2> getOrbcadTransitDataFake(){
+
+  private ArrayList<TransitDataV2> getOrbcadTransitDataFake(){
 	  StopTimesCsvDecrypt stcd = new StopTimesCsvDecrypt();
     ArrayList<TransitDataV2> transitData = stcd.decrypt();
-    _log.info(transitData.toString());
+    _log.debug(transitData.toString());
     return transitData;
   }
 
@@ -325,8 +351,8 @@ public class HartToGtfsRealtimeServiceV2{
 	}
 
 	public void writeGtfsRealtimeOutput() throws Exception {
-		_log.info("Writing Hart GTFS realtime...");
-		if(_conn==null){
+		_log.debug("Writing Hart GTFS realtime...");
+		if(_conn==null) {
       Properties connProps = getConnectionProperties();
       _conn = getConnection(connProps);
     }
@@ -337,16 +363,15 @@ public class HartToGtfsRealtimeServiceV2{
 //		  ArrayList<TransitDataV2> transitData = getOrbcadTransitDataFake();
 	    buildTripUpdates(transitData);
 	    buildVehiclePositions(transitData);
-	    _log.info("tripUpdates = "+_tripUpdatesMessage.getEntityCount());
-	    _log.info("vehiclePositions = "+_vehiclePositionsMessage.getEntityCount());
+	    _log.info("tripUpdates = "+_tripUpdatesMessage.getEntityCount() + ", " + "vehiclePositions = "+_vehiclePositionsMessage.getEntityCount());
+	    _log.debug("vehiclePositions = "+_vehiclePositionsMessage.getEntityCount());
 		}
 	}
 
 	private class RefreshTransitData implements Runnable {
-		@Override
 		public void run() {
 			try {
-				_log.info("refreshing vehicles");
+				_log.debug("refreshing vehicles");
 				writeGtfsRealtimeOutput();
 			} catch (Exception ex) {
 				_log.error("Failed to refresh TransitData: " + ex.getMessage());
