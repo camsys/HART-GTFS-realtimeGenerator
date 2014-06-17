@@ -76,7 +76,9 @@ public class HartToGtfsRealtimeServiceV2{
 	
 	private GtfsRealtimeMutableProvider _gtfsRealtimeProvider;
 	
-	private ScheduledExecutorService _executor;
+	private ScheduledExecutorService _refreshExecutor;
+	
+	private ScheduledExecutorService _delayExecutor;
 
 	private Connection _conn = null;
 	
@@ -111,15 +113,19 @@ public class HartToGtfsRealtimeServiceV2{
 	@PostConstruct
 	public void start() {
 		_log.info("starting GTFS-realtime service");
-		_executor = Executors.newSingleThreadScheduledExecutor();
-		_executor.scheduleAtFixedRate(new RefreshTransitData(), 0,
+		_refreshExecutor = Executors.newSingleThreadScheduledExecutor();
+		_refreshExecutor.scheduleAtFixedRate(new RefreshTransitData(), 0,
 				_refreshInterval, TimeUnit.SECONDS);
+		_delayExecutor = Executors.newSingleThreadScheduledExecutor();
+    _delayExecutor.scheduleAtFixedRate(new DelayThread(), _refreshInterval,
+        _refreshInterval/4, TimeUnit.SECONDS);
 	}
 
 	@PreDestroy
 	public void stop() {
 		_log.info("stopping GTFS-realtime service");
-		_executor.shutdownNow();
+		_refreshExecutor.shutdownNow();
+		_delayExecutor.shutdownNow();
 	}
 
 	private Properties getConnectionProperties(){		
@@ -163,7 +169,7 @@ public class HartToGtfsRealtimeServiceV2{
 
 	 private void cleanup() {
 	   // for now we just measure a successful connection/disconnect from db, we don't look at data
-	   this._gtfsRealtimeProvider.setLastUpdateTimestamp(System.currentTimeMillis());
+	   _gtfsRealtimeProvider.setLastUpdateTimestamp(System.currentTimeMillis());
 	   _log.debug("closing connection");
 	    try {
 	      if (_conn != null) {
@@ -377,5 +383,20 @@ public class HartToGtfsRealtimeServiceV2{
 				_log.error("Failed to refresh TransitData: " + ex.getMessage());
 			}
 		}
+	}
+	
+	private class DelayThread implements Runnable {
+	  public void run() {
+	    long hangTime = (System.currentTimeMillis() - _gtfsRealtimeProvider.getLastUpdateTimestamp()) / 1000;
+	    if (hangTime> ((_refreshInterval * 2) - (_refreshInterval / 2))) {
+  	    // if we've reached here, the connection to the database has hung
+	      // we assume a service-based configuration and simply exit
+	      // TODO adjust network/driver timeouts instead!
+	      _log.error("Connection hung with delay of " + hangTime + ".  Exiting!");
+	      System.exit(1);
+	    } else {
+	      _log.info("hangTime:" + hangTime);
+	    }
+	  }
 	}
 }
