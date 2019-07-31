@@ -208,6 +208,7 @@ public class HartToGtfsRealtimeServiceV2{
 
 	private void buildTripUpdates(ArrayList<TransitDataV2> transitData){
 		FeedMessage.Builder tripUpdates = GtfsRealtimeLibrary.createFeedMessageBuilder();
+
 		
 		ArrayList<StopTimeUpdate> stopTimeUpdateSet = new ArrayList<StopTimeUpdate>();
 
@@ -275,6 +276,7 @@ public class HartToGtfsRealtimeServiceV2{
 			if(vehicleId!=null && !vehicleId.isEmpty()) {
 			  tripUpdate.setVehicle(vehicleDescriptor);
 			}
+			tripUpdate.setTimestamp(time.getTime()/1000);
 			
 //			OneBusAwayTripUpdate.Builder obaTripUpdate = OneBusAwayTripUpdate.newBuilder();
 //      obaTripUpdate.setDelay(delay);
@@ -283,7 +285,6 @@ public class HartToGtfsRealtimeServiceV2{
 			FeedEntity.Builder tripUpdateEntity = FeedEntity.newBuilder();
 			tripUpdateEntity.setId(TRIP_UPDATE_PREFIX+tripId);
 			tripUpdateEntity.setTripUpdate(tripUpdate);
-
 			tripUpdates.addEntity(tripUpdateEntity);
 		}
 
@@ -344,6 +345,7 @@ public class HartToGtfsRealtimeServiceV2{
 			vehiclePosition.setPosition(position);
 			vehiclePosition.setTrip(tripDescriptor);
 			vehiclePosition.setVehicle(vehicleDescriptor);
+			vehiclePosition.setTimestamp(time.getTime()/1000);
 
 			FeedEntity.Builder vehiclePositionEntity = FeedEntity.newBuilder();
 			vehiclePositionEntity.setId(VEHICLE_POSITION_PREFIX+vehicleId);
